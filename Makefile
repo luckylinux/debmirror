@@ -1,4 +1,4 @@
-.PHONY: clean
+.PHONY: clean check
 
 all: debmirror.1
 
