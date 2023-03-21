@@ -6,6 +6,9 @@ debmirror (1:2.38) UNRELEASED; urgency=medium
   [ Colin Watson ]
   * Bump debhelper from old 12 to 13.
 
+  [ Alexander Sulfrian ]
+  * Two tiny fixes for the dependencies in the Makefile.
+
  -- Colin Watson <cjwatson@debian.org>  Sat, 24 Dec 2022 12:42:26 +0000
 
 debmirror (1:2.37) unstable; urgency=medium
