@@ -1,4 +1,4 @@
-debmirror (1:2.38) UNRELEASED; urgency=medium
+debmirror (1:2.38) unstable; urgency=medium
 
   [ Neil Roza ]
   * check_file: Fix warning if $size is undefined.
@@ -9,7 +9,7 @@ debmirror (1:2.38) UNRELEASED; urgency=medium
   [ Alexander Sulfrian ]
   * Two tiny fixes for the dependencies in the Makefile.
 
- -- Colin Watson <cjwatson@debian.org>  Sat, 24 Dec 2022 12:42:26 +0000
+ -- Colin Watson <cjwatson@debian.org>  Fri, 14 Jul 2023 12:15:43 +0100
 
 debmirror (1:2.37) unstable; urgency=medium
 
