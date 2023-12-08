@@ -3078,6 +3078,8 @@ sub di_get_files {
 
   foreach my $image_dir (sort keys %di_files) {
     my $lres = 1;
+    make_dir ("$tdir/$image_dir");
+    make_dir ("$image_dir");
     foreach my $file (sort keys %{ $di_files{$image_dir} }) {
       next unless $di_files{$image_dir}{$file}{status} == 0;
       # Fetch images into a temporary location
