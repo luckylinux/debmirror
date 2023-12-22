@@ -46,6 +46,8 @@ removed.
 
 =cut
 
+use strict;
+
 sub usage {
   warn join(" ", @_)."\n" if @_;
   warn <<EOF;
@@ -580,7 +582,6 @@ excluding the section 'debug' and the package 'foo-doc':
 
 =cut
 
-use strict;
 use Cwd;
 use Storable qw(nstore retrieve);
 use Getopt::Long;

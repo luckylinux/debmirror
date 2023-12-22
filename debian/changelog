@@ -1,3 +1,10 @@
+debmirror (1:2.39) UNRELEASED; urgency=medium
+
+  * perlcritic fixes:
+    - Move "use strict" above all code.
+
+ -- Colin Watson <cjwatson@debian.org>  Fri, 22 Dec 2023 14:40:06 +0000
+
 debmirror (1:2.38) unstable; urgency=medium
 
   [ Neil Roza ]
