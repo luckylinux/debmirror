@@ -1201,11 +1201,12 @@ say("Parsing Packages and Sources files ...");
 
   my %arches = map { $_ => 1 } (@arches, "all");
 
-  my $include = "(".join("|", @includes).")" if @includes;
-  my $exclude = "(".join("|", @excludes).")" if @excludes;
-  my $exclude_deb_section =
+  my ($include, $exclude, $exclude_deb_section, $limit_priority);
+  $include = "(".join("|", @includes).")" if @includes;
+  $exclude = "(".join("|", @excludes).")" if @excludes;
+  $exclude_deb_section =
     "(".join("|", @excludes_deb_section).")" if @excludes_deb_section;
-  my $limit_priority = "(".join("|", @limit_priority).")" if @limit_priority;
+  $limit_priority = "(".join("|", @limit_priority).")" if @limit_priority;
   my $field_filters =
     scalar(keys %includes_field) || scalar(keys %excludes_field);
   my %binaries;
@@ -2655,9 +2656,9 @@ sub i18n_from_release {
   my ($dist,$distpath) = @_;
   my $subdir = "dists/$dist/$distpath";
   my $compdir = $tempdir."/".$subdir;
-  my ($sha1, $size, $filename);
-  my $exclude = "(".join("|", @excludes).")" if @excludes;
-  my $include = "(".join("|", @includes).")" if @includes;
+  my ($exclude, $include, $sha1, $size, $filename);
+  $exclude = "(".join("|", @excludes).")" if @excludes;
+  $include = "(".join("|", @includes).")" if @includes;
 
   # Create i18n directories
   make_dir($subdir);
@@ -2708,9 +2709,9 @@ sub cnf_from_release {
   my ($dist,$distpath) = @_;
   my $subdir = "dists/$dist/$distpath";
   my $compdir = $tempdir."/".$subdir;
-  my ($size, $filename);
-  my $exclude = "(".join("|", @excludes).")" if @excludes;
-  my $include = "(".join("|", @includes).")" if @includes;
+  my ($exclude, $include, $size, $filename);
+  $exclude = "(".join("|", @excludes).")" if @excludes;
+  $include = "(".join("|", @includes).")" if @includes;
 
   # Create cnf directories
   make_dir($subdir);
@@ -2763,9 +2764,9 @@ sub dep11_from_release {
   my ($dist,$distpath) = @_;
   my $subdir = "dists/$dist/$distpath";
   my $compdir = $tempdir."/".$subdir;
-  my ($size, $filename);
-  my $exclude = "(".join("|", @excludes).")" if @excludes;
-  my $include = "(".join("|", @includes).")" if @includes;
+  my ($exclude, $include, $size, $filename);
+  $exclude = "(".join("|", @excludes).")" if @excludes;
+  $include = "(".join("|", @includes).")" if @includes;
 
   # Create dep11 directories
   make_dir($subdir);
@@ -3002,8 +3003,9 @@ sub di_check_dists {
 
 sub di_add_files {
   my $tdir = "$tempdir/d-i";
-  my $exclude = "(".join("|", @excludes).")" if @excludes;
-  my $include = "(".join("|", @includes).")" if @includes;
+  my ($exclude, $include);
+  $exclude = "(".join("|", @excludes).")" if @excludes;
+  $include = "(".join("|", @includes).")" if @includes;
 
   foreach my $dist (keys %distset) {
     next unless exists $distset{$dist}{"d-i"};
