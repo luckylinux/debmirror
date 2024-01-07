@@ -11,11 +11,11 @@ our @kind = (
 );
 
 my @saved_line;
-sub getline (\@) {
+sub getline {
     $_ = @saved_line ? pop(@saved_line) : shift @{$_[0]};
     return defined;
 }
-sub ungetline () { push @saved_line, $_ }
+sub ungetline { push @saved_line, $_ }
 
 local $/ = '';
 while (<>) {
@@ -28,11 +28,11 @@ while (<>) {
         }
     }
     defined $dir or die "$0: missing Directory field\n";
-    while (getline @line) {
+    while (getline \@line) {
         print "$_\n";
         if (/^Files:\s*$/) {
             my @file;
-            while (getline @line) {
+            while (getline \@line) {
                 ungetline(), last if /^\S/;
                 s/^.*?(\S+)\s*$/$1/;
                 push @file, $_;
