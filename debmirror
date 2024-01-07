@@ -1545,8 +1545,8 @@ if (@di_dists) {
 # Update suite->codename symlinks.
 if (! $omit_suite_symlinks && ! $do_dry_run) {
   my %suites;
-  opendir (DIR, 'dists') or die "Can't open dists/: $!\n";
-  foreach my $file (grep (!/^\.\.?$/, readdir (DIR))) {
+  opendir my $dir, 'dists' or die "Can't open dists/: $!\n";
+  foreach my $file (grep (!/^\.\.?$/, readdir $dir)) {
     if (-l "dists/$file") {
       my $cur = readlink("dists/$file") or die "Error reading symlink dists/$file: $!";
       if (exists $distset{$cur}{suite} &&
@@ -1557,7 +1557,7 @@ if (! $omit_suite_symlinks && ! $do_dry_run) {
       }
     }
   }
-  closedir (DIR);
+  closedir $dir;
 
   foreach my $dist (keys %distset) {
     next if (! exists $distset{$dist}{suite});

@@ -12,22 +12,22 @@ our @kind = (
 @ARGV == 1 or die "usage: $0 [DSC-FILE]\n";
 
 my $dsc = shift @ARGV;
-open DSC, '<', $dsc;
+open my $dscfh, '<', $dsc;
 chdir $1 if $dsc =~ m%^(.*/).*?$%;
 
-while (<DSC>) {
+while (<$dscfh>) {
     last if /^Files:/;
     print;
 }
 
 my @filename;
-while (<DSC>) {
+while (<$dscfh>) {
     /\S/ or last;
     my ($sum, $size, $filename) = /(\S+)\s*(\S+)\s*(\S+)/;
     push @filename, $filename;
 }
 
-close DSC;
+close $dscfh;
 
 for my $kind (@kind) {
     print "$kind->{name}:\n";

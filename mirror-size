@@ -31,14 +31,14 @@ END { unlink $tfile if $tfile }
 
 foreach my $suite (@suites) {
   next unless -f "$root/$suite/Release";
-  if (open RELEASE, "<$root/$suite/Release") {
-    while (<RELEASE>) {
+  if (open my $release, "<", "$root/$suite/Release") {
+    while (<$release>) {
       if (/^Codename:/) {
 	($dists{$suite}) = m/^Codename:\s+(.*)/i;
 	last;
       }
     }
-    close RELEASE;
+    close $release;
   }
 
   foreach my $sect (@sects) {
@@ -152,10 +152,10 @@ sub parse_packages {
   my ($file, $suite, $sect, $arch) = @_;
   my ($line, $res, $size, $filename, $architecture);
   system_redirect_io("gzip -d", "$root/$suite/$sect/$file", "$tfile");
-  open(TFILE, "<", $tfile) or die "$tfile: $!";
+  open(my $tfh, "<", $tfile) or die "$tfile: $!";
   for (;;) {
     my $buf;
-    unless (defined( $buf = <TFILE> )) {
+    unless (defined( $buf = <$tfh> )) {
       last if eof;
       die "$file: $!" if $!;
     }
@@ -185,17 +185,17 @@ sub parse_packages {
     $files{$filename}{x} = 1;
     $files{$filename}{$suite} = 1;
   }
-  close(TFILE);
+  close($tfh);
 }
 sub parse_sources {
   local $/ = "\n\n";
   my ($file, $suite, $sect) = @_;
   my ($line, $res, $size, $directory, $filename, $md5sum);
   system_redirect_io("gzip -d", "$root/$suite/$sect/$file", "$tfile");
-  open(TFILE, "<", $tfile) or die "$tfile: $!";
+  open(my $tfh, "<", $tfile) or die "$tfile: $!";
   for (;;) {
     my $buf;
-    unless (defined( $buf = <TFILE> )) {
+    unless (defined( $buf = <$tfh> )) {
       last if eof;
       die "$file: $!" if $!;
     }
@@ -227,7 +227,7 @@ sub parse_sources {
       $files{$filename}{$suite} = 1;
     }
   }
-  close(TFILE);
+  close($tfh);
 }
 
 # run system() with stdin and stdout redirected to files

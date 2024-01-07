@@ -3,6 +3,7 @@ debmirror (1:2.39) UNRELEASED; urgency=medium
   * perlcritic fixes:
     - Move "use strict" above all code.
     - Avoid declaring variables in conditional statements.
+    - Don't use bareword file/directory handles.
 
  -- Colin Watson <cjwatson@debian.org>  Fri, 22 Dec 2023 14:40:06 +0000
 
