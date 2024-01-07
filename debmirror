@@ -662,8 +662,8 @@ if (@config_files) {
     require $config_file;
   }
 } else {
-  require "/etc/debmirror.conf" if -r "/etc/debmirror.conf";
-  require "$HOME/.debmirror.conf" if -r "$HOME/.debmirror.conf";
+  require "/etc/debmirror.conf" if -r "/etc/debmirror.conf";      ## no critic
+  require "$HOME/.debmirror.conf" if -r "$HOME/.debmirror.conf";  ## no critic
 }
 
 # This hash contains the releases to mirror. If both codename and suite can be
