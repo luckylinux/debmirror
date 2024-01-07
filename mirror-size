@@ -145,6 +145,7 @@ sub print_ruler {
     print("|" . "-" x ($width{$suite} + 2));
   }
   print("|" . "-" x 7 . "\n");
+  return;
 }
 
 sub parse_packages {
@@ -186,6 +187,7 @@ sub parse_packages {
     $files{$filename}{$suite} = 1;
   }
   close($tfh);
+  return;
 }
 sub parse_sources {
   local $/ = "\n\n";
@@ -228,6 +230,7 @@ sub parse_sources {
     }
   }
   close($tfh);
+  return;
 }
 
 # run system() with stdin and stdout redirected to files
@@ -239,4 +242,5 @@ sub system_redirect_io {
     unlink($tofile) or die "unlink($tofile) failed: $!";
   }
   system("$command <$fromfile >$tofile");
+  return;
 }

@@ -1089,6 +1089,7 @@ $bytes_gotten = $bytes_meta;
 sub add_bytes {
   my $name=shift;
   $bytes_to_get +=  $file_lists{"$tempdir/$name"}{size} if exists $file_lists{"$tempdir/$name"}{size};
+  return;
 }
 foreach my $dist (keys %distset) {
   next unless exists $distset{$dist}{mirror};
@@ -1646,6 +1647,7 @@ sub add_bytes_gotten {
   if ($doing_meta) {
     $bytes_meta += $size;
   }
+  return;
 }
 
 # Return true if a package stanza is permitted by
@@ -1788,6 +1790,7 @@ sub print_percent {
   my $percent = $bytes_to_get ? (($bytes_gotten / $bytes_to_get)*100) : 0;
 
   printf "[%3.0f%%] %s", $percent, $message;
+  return;
 }
 
 # Get a file via http, or possibly ftp if a proxy is being used with that
@@ -1987,6 +1990,7 @@ sub rsync_extra {
     say("Updating extra files (using rsync): @extras.");
   }
   rsync_extra_get(@includes);
+  return;
 }
 
 sub rsync_extra_get {
@@ -2022,6 +2026,7 @@ sub rsync_extra_get {
   }
   close $fh;
   unlink $rsynctempfile;
+  return;
 }
 
 # run system() with stdin and stdout redirected to files
@@ -2035,6 +2040,7 @@ sub system_redirect_io {
   my $cmd="$command <$fromfile >$tofile";
   system("$cmd");
   die "Failed: $cmd\n" if ($? != 0);
+  return;
 }
 
 sub split_dist {
@@ -2083,6 +2089,7 @@ sub update_latest_links {
       say("Not updating $mirrordir/dists/$dist/latest");
     }
   }
+  return;
 }
 
 sub link_release_into_snapshot {
@@ -2092,6 +2099,7 @@ sub link_release_into_snapshot {
   link("$tempdir/dists/$codename$dist_sdir/$base",
        "$mirrordir/dists/$dist/$next/$base")
     or die "Error while linking $tempdir/dists/$codename$dist_sdir/$base: $!\n";
+  return;
 }
 
 sub link_contents_into_snapshot {
@@ -2107,6 +2115,7 @@ sub link_contents_into_snapshot {
         or die "Error while linking $tempdir/dists/$dist$sect/Contents-$arch.gz: $!\n";
     }
   }
+  return;
 }
 
 sub link_auxfile_into_snapshot {
@@ -2118,6 +2127,7 @@ sub link_auxfile_into_snapshot {
   make_path($target_path);
   link("$tempdir/$file", "$target_path/$filename")
     or die "Error while linking $tempdir/$file: $!";
+  return;
 }
 
 # Split a clearsigned message into data and signature.
@@ -2279,6 +2289,7 @@ sub gpg_verify {
       $num_errors++;
     }
   }
+  return;
 }
 
 sub get_release {
@@ -2558,6 +2569,7 @@ sub get_index {
   $files{"$subdir/Release"}=1;
   $files{"$tempdir/$subdir/$file"}=1;
   $files{"$tempdir/$subdir/Release"}=1;
+  return;
 }
 
 sub update_contents {
@@ -2623,6 +2635,7 @@ sub get_contents_files {
   do_contents_for_each_dist_arch_sect(
     $help, [\$first], {}
   );
+  return;
 }
 
 # hardlink index files from tempdir to next debmarshal snapshot location
@@ -2650,6 +2663,7 @@ sub link_index {
   link("$tempdir/dists/$dist/$section/$archdir/$file.xz",
        "$mirrordir/dists/$dist/$next/$section/$archdir/$file.xz")
     or die "Error while linking $tempdir/dists/$dist/$section/$archdir/$file.xz: $!\n";
+  return;
 }
 
 sub i18n_from_release {
@@ -2686,6 +2700,7 @@ sub i18n_from_release {
       $i18n_get{"$subdir/$filename"}{filename} = $filename;
     }
   }
+  return;
 }
 
 sub get_i18n_files {
@@ -2703,6 +2718,7 @@ sub get_i18n_files {
       }
     }
   }
+  return;
 }
 
 sub cnf_from_release {
@@ -2741,6 +2757,7 @@ sub cnf_from_release {
       $cnf_get{"$subdir/$filename"}{filename} = $filename;
     }
   }
+  return;
 }
 
 sub get_cnf_files {
@@ -2758,6 +2775,7 @@ sub get_cnf_files {
       }
     }
   }
+  return;
 }
 
 sub dep11_from_release {
@@ -2796,6 +2814,7 @@ sub dep11_from_release {
       $dep11_get{"$subdir/$filename"}{filename} = $filename;
     }
   }
+  return;
 }
 
 sub get_dep11_files {
@@ -2813,6 +2832,7 @@ sub get_dep11_files {
       }
     }
   }
+  return;
 }
 
 sub fetch_and_apply_diffs {
@@ -2900,6 +2920,7 @@ sub fetch_and_apply_diffs {
     push (@errlog,"$subdir/$type failed sha1sum check, removing\n");
     unlink "$tempdir/$subdir/$type";
   }
+  return;
 }
 
 # Make a directory including all needed parents.
@@ -2921,6 +2942,7 @@ sub fetch_and_apply_diffs {
         $seen{$current}=1;
       }
     }
+    return;
   }
 }
 
@@ -2962,6 +2984,7 @@ sub cleanup_unknown_files {
   }
   # Clean up obsolete files of D-I images
   di_cleanup() if @di_dists;
+  return;
 }
 
 sub di_skip_dist {
@@ -2999,6 +3022,7 @@ sub di_check_dists {
       unlink "$tdir/InRelease";
     }
   }
+  return;
 }
 
 sub di_add_files {
@@ -3045,6 +3069,7 @@ sub di_add_files {
       close($fh);
     }
   }
+  return;
 }
 
 # ToDo: for rsync maybe it would make sense to sync the images directly
@@ -3086,6 +3111,7 @@ sub di_get_files {
       say("Failed to download some files in $image_dir; not updating images.");
     }
   }
+  return;
 }
 
 sub di_cleanup {
@@ -3117,6 +3143,7 @@ sub di_cleanup {
     }
     chdir("$mirrordir") or die "unable to chdir($mirrordir): $!\n";
   }
+  return;
 }
 
 sub download_finished {
@@ -3130,6 +3157,7 @@ sub download_finished {
     $avg_speed = sprintf("%3.0f",($bytes_gotten / $total_time)) unless ($total_time == 0);
     say("Downloaded ".print_dl_size($bytes_gotten)." in ".$total_time."s at ".(int($avg_speed/1024*100)/100)." kiB/s.");
   }
+  return;
 }
 
 sub rename_distdir {
@@ -3148,6 +3176,7 @@ sub rename_distdir {
   }
   rename("$dir/$suite", "$dir/$codename");
   say("  conversion completed successfully");
+  return;
 }
 
 sub save_state_cache {
@@ -3182,6 +3211,7 @@ sub save_state_cache {
       say("State cache expired during this run; next run will not use cache.");
     }
   }
+  return;
 }
 
 sub load_state_cache {
@@ -3227,6 +3257,7 @@ sub load_state_cache {
   } else {
     unlink $cache_file if -f $cache_file;
   }
+  return;
 }
 
 sub downloads_via_http {
@@ -3296,10 +3327,12 @@ sub do_contents_for_each_dist_arch_sect {
 
 sub say {
   print join(' ', @_)."\n" if ($verbose or $progress);
+  return;
 }
 
 sub debug {
   print $0.': '.join(' ', @_)."\n" if $debug;
+  return;
 }
 
 =head1 COPYRIGHT

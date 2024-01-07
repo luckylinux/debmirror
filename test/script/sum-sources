@@ -15,7 +15,7 @@ sub getline {
     $_ = @saved_line ? pop(@saved_line) : shift @{$_[0]};
     return defined;
 }
-sub ungetline { push @saved_line, $_ }
+sub ungetline { push @saved_line, $_; return; }
 
 local $/ = '';
 while (<>) {
