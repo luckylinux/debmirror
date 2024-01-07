@@ -2853,7 +2853,7 @@ sub fetch_and_apply_diffs {
 
   # Download diff files as necessary
   $ret = 1;
-  foreach $file (sort keys %diff_sha1) {
+  foreach my $file (sort keys %diff_sha1) {
     if (!check_diff("$tempdir/$subdir/$type.diff/$file", $diff_size{$file}, $diff_sha1{$file})) {
       remote_get("$subdir/$type.diff/$file.gz");
 #FIXME: before download
@@ -2880,7 +2880,7 @@ sub fetch_and_apply_diffs {
   close($fh);
   $sha1 = $digest->hexdigest;
   $size = -s "$tempdir/$subdir/$type";
-  foreach $file (sort keys %history_sha1) {
+  foreach my $file (sort keys %history_sha1) {
     next unless ($sha1 eq $history_sha1{$file} && $size eq $history_size{$file});
     if (system("gzip -d < \"$tempdir/$subdir/$type.diff/$file.gz\" | patch --ed \"$tempdir/$subdir/$type\"")) {
       say("Patch $file failed, will fetch $subdir/$type file");
