@@ -12,7 +12,8 @@ our @kind = (
 
 chdir "${FindBin::RealBin}/debian";
 my @file = grep { !m%^dists/[^/]+/Release$% }
-  map { chomp; s%^\./%%; $_; } sort `find . -mindepth 2 -type f`;
+  map { my $f = $_; chomp $f; $f =~ s%^\./%%; $f; }
+  sort `find . -mindepth 2 -type f`;
 
 for my $kind (@kind) {
     print $kind->{name} . ":\n";

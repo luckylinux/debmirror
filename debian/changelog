@@ -5,6 +5,7 @@ debmirror (1:2.39) UNRELEASED; urgency=medium
     - Avoid declaring variables in conditional statements.
     - Don't use bareword file/directory handles.
     - Make all loop iterators lexical.
+    - Don't modify $_ in list functions.
 
  -- Colin Watson <cjwatson@debian.org>  Fri, 22 Dec 2023 14:40:06 +0000
 
