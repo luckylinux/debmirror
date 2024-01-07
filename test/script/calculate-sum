@@ -18,4 +18,3 @@ my $size0 = $stat[7];
 my $size = $style eq 'Sources' ? $size0 : sprintf "%${field_width}d", $size0;
 my ($basename) = $filename =~ m%/([^/]+)$%;
 print " $sum $size " . ($style eq 'Sources' ? $basename : $filename) . "\n";
-

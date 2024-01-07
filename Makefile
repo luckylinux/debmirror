@@ -11,4 +11,3 @@ debmirror.1: debmirror
 clean:
 	rm -f debmirror.1
 	$(MAKE) -C test $@
-

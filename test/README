@@ -35,4 +35,3 @@ rm -r /tmp/debian
 make -C test
 ./debmirror -r "${PWD}/test/debian" --method=file -d sid -a amd64\
  --getcontents --no-check-gpg /tmp/debian
-

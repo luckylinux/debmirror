@@ -103,4 +103,3 @@ for A in\
  $(<script-data/files-to-bzip2.dat)\
  $(<script-data/files-to-xz.dat);\
  do rm debian/$A; done
-
