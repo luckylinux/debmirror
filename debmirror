@@ -846,7 +846,7 @@ $post_cleanup=0 if ($pre_cleanup);
 $post_cleanup=0 if ($debmarshal);
 
 # Display configuration.
-$|=1 if $debug;
+local $|=1 if $debug;
 if ($passwd eq "anonymous@") {
   if (downloads_via_http()) {
     say("Mirroring to $mirrordir from $download_method://$host/$remoteroot/");
@@ -902,8 +902,8 @@ my $lockmgr = LockFile::Simple->make(-format => "%f/$lockfile", -max => 12,
                                      -warn => 1, -stale => 1, -hold => 0);
 my $lock = $lockmgr->lock("$mirrordir")
   or die "$lockfile exists or you lack proper permissions; aborting";
-$SIG{INT}=sub { $lock->release; exit 1 };
-$SIG{TERM}=sub { $lock->release; exit 1 };
+local $SIG{INT}=sub { $lock->release; exit 1 };
+local $SIG{TERM}=sub { $lock->release; exit 1 };
 
 # Create tempdir if missing
 my $tempdir=".temp";
@@ -1798,8 +1798,7 @@ sub print_percent {
 # Get a file via http, or possibly ftp if a proxy is being used with that
 # method. First displaying its filename if progress is on.
 sub http_get {
-  my $oldautoflush = $|;
-  $| = 1;
+  local $| = 1;
   my $file=shift;
   my $url;
   if ($user eq 'anonymous'){
@@ -1881,14 +1880,12 @@ sub http_get {
   my @stat = stat $file;
   add_bytes_gotten($stat[7]) if (@stat);
 
-  $| = $oldautoflush;
   return $ret;
 }
 
 # Get a file via ftp, first displaying its filename if progress is on.
 sub ftp_get {
-  my $oldautoflush = $|;
-  $| = 1;
+  local $| = 1;
   my $file=shift;
   my $mtime;
 
@@ -1922,7 +1919,6 @@ sub ftp_get {
   }
   my $size=$ftp->size($file);
   add_bytes_gotten($size) if $size;
-  $| = $oldautoflush;
   print "\n" if (($verbose and not $progress) or ($do_dry_run and $progress));
   return $ret;
 }
