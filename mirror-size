@@ -150,9 +150,9 @@ sub print_ruler {
 }
 
 sub parse_packages {
-  local $/ = "\n\n";
   my ($file, $suite, $sect, $arch) = @_;
   my ($line, $res, $size, $filename, $architecture);
+  local $/ = "\n\n";
   system_redirect_io("gzip -d", "$root/$suite/$sect/$file", "$tfile");
   open(my $tfh, "<", $tfile) or die "$tfile: $!";
   for (;;) {
@@ -191,9 +191,9 @@ sub parse_packages {
   return;
 }
 sub parse_sources {
-  local $/ = "\n\n";
   my ($file, $suite, $sect) = @_;
   my ($line, $res, $size, $directory, $filename, $md5sum);
+  local $/ = "\n\n";
   system_redirect_io("gzip -d", "$root/$suite/$sect/$file", "$tfile");
   open(my $tfh, "<", $tfile) or die "$tfile: $!";
   for (;;) {

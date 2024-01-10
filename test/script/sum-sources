@@ -12,7 +12,8 @@ our @kind = (
 
 my @saved_line;
 sub getline {
-    $_ = @saved_line ? pop(@saved_line) : shift @{$_[0]};
+    my ($lineref) = @_;
+    $_ = @saved_line ? pop(@saved_line) : shift @$lineref;
     return defined;
 }
 sub ungetline { push @saved_line, $_; return; }
