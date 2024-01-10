@@ -1437,7 +1437,7 @@ sub batch_get {
           if (@result) {
             @result = sort(@result);
             my $prev = "not equal to $result[0]";
-            @result = grep($_ ne $prev && ($prev = $_, 1), @result);
+            @result = grep { $_ ne $prev && ($prev = $_, 1) } @result;
             for (@result) {
               print $fh "$_\n";
             }
@@ -1486,7 +1486,7 @@ sub batch_get {
     if (@result) {
       @result = sort(@result);
       my $prev = "not equal to $result[0]";
-      @result = grep($_ ne $prev && ($prev = $_, 1), @result);
+      @result = grep { $_ ne $prev && ($prev = $_, 1) } @result;
       for (@result) {
         print $fh "$_\n";
       }
@@ -1549,7 +1549,7 @@ if (@di_dists) {
 if (! $omit_suite_symlinks && ! $do_dry_run) {
   my %suites;
   opendir my $dir, 'dists' or die "Can't open dists/: $!\n";
-  foreach my $file (grep (!/^\.\.?$/, readdir $dir)) {
+  foreach my $file (grep { !/^\.\.?$/ } readdir $dir) {
     if (-l "dists/$file") {
       my $cur = readlink("dists/$file") or die "Error reading symlink dists/$file: $!";
       if (exists $distset{$cur}{suite} &&
@@ -1984,7 +1984,7 @@ sub rsync_extra {
   }
   return if (! @includes);
   if (! $early) {
-    @extras = grep(!/^trace$/, @extras); # drop 'trace' from list
+    @extras = grep { !/^trace$/ } @extras; # drop 'trace' from list
     say("Updating extra files (using rsync): @extras.");
   }
   rsync_extra_get(@includes);
@@ -2738,7 +2738,7 @@ sub cnf_from_release {
 
     my $filename = substr($path, length($compdir)+1, length($path)-length($compdir)-1);
     next if $filename !~ /\.(?:gz|bz2|xz)$/;
-    my $all_arches = "(".join("|", map(quotemeta, @arches)).")";
+    my $all_arches = "(".join("|", map { quotemeta } @arches).")";
     next if $filename =~ /^Commands-/ and $filename !~ /^Commands-$all_arches\./;
 
     my $size = $file_lists{$path}{size};
@@ -2795,7 +2795,7 @@ sub dep11_from_release {
 
     my $filename = substr($path, length($compdir)+1, length($path)-length($compdir)-1);
     next if $filename !~ /\.(?:gz|bz2|xz)$/;
-    my $all_arches = "(".join("|", map(quotemeta, @arches)).")";
+    my $all_arches = "(".join("|", map { quotemeta } @arches).")";
     next if $filename =~ /^Components-/ and $filename !~ /^Components-$all_arches\./;
 
     my $size = $file_lists{$path}{size};

@@ -11,6 +11,7 @@ debmirror (1:2.39) UNRELEASED; urgency=medium
     - Enable warnings lexically rather than using "perl -w".
     - Use "state" rather than a closure, avoiding some unreachable code.
     - Localize assignments to $| and $SIG{...}.
+    - Use the block form of grep and map.
 
  -- Colin Watson <cjwatson@debian.org>  Fri, 22 Dec 2023 14:40:06 +0000
 
