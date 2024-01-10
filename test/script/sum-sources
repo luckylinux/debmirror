@@ -33,7 +33,10 @@ while (<>) {
         if (/^Files:\s*$/) {
             my @file;
             while (getline \@line) {
-                ungetline(), last if /^\S/;
+                if (/^\S/) {
+                    ungetline();
+                    last;
+                }
                 s/^.*?(\S+)\s*$/$1/;
                 push @file, $_;
             }
