@@ -1,2 +1,8 @@
+[InputOutput::RequireBriefOpen]
+severity = 2
+
+[Subroutines::ProhibitBuiltinHomonyms]
+allow = say
+
 [Subroutines::RequireFinalReturn]
 terminal_funcs = usage

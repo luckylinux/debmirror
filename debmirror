@@ -50,7 +50,7 @@ use warnings;
 use strict;
 use feature 'state';
 
-sub usage {
+sub usage {  ## no critic
   warn join(" ", @_)."\n" if @_;
   warn <<EOF;
 Usage: $0 [options] <mirrordir>
@@ -3267,7 +3267,7 @@ sub downloads_via_https {
   return $_ eq 'https';
 }
 
-sub downloads_via_http_or_https {
+sub downloads_via_http_or_https {  ## no critic
   return downloads_via_http(@_) || downloads_via_https(@_);
 }
 
@@ -3289,7 +3289,7 @@ sub downloads_via_rsync {
   return $_ eq 'rsync';
 }
 
-sub uses_LWP {
+sub uses_LWP {  ## no critic
   return !downloads_via_rsync(@_);
 }
 
@@ -3320,12 +3320,12 @@ sub do_contents_for_each_dist_arch_sect {
   return 1;
 }
 
-sub say {
+sub say {  ## no critic
   print join(' ', @_)."\n" if ($verbose or $progress);
   return;
 }
 
-sub debug {
+sub debug {  ## no critic
   print $0.': '.join(' ', @_)."\n" if $debug;
   return;
 }
