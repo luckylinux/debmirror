@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 # This script can be used on a mirror (or e.g. merkel.debian.org) to
 # produce an overview of the size of the archive. The numbers reflect
@@ -8,6 +8,7 @@
 
 # Copyright (c) 2009 Frans Pop <fjp@debian.org>
 
+use warnings;
 use strict;
 use Cwd;
 use Getopt::Long;
