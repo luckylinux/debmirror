@@ -48,6 +48,7 @@ removed.
 
 use warnings;
 use strict;
+use feature 'state';
 
 sub usage {
   warn join(" ", @_)."\n" if @_;
@@ -2925,26 +2926,23 @@ sub fetch_and_apply_diffs {
 }
 
 # Make a directory including all needed parents.
-{
-  my %seen;
+sub make_dir {
+  state %seen;
+  my $dir=shift;
 
-  sub make_dir {
-    my $dir=shift;
-
-    my @parts=split('/', $dir);
-    my $current='';
-    foreach my $part (@parts) {
-      $current.="$part/";
-      if (! $seen{$current}) {
-        if (! -d $current) {
-          mkdir($current) or die "mkdir $current: $!";
-          debug("Created directory: $current");
-        }
-        $seen{$current}=1;
+  my @parts=split('/', $dir);
+  my $current='';
+  foreach my $part (@parts) {
+    $current.="$part/";
+    if (! $seen{$current}) {
+      if (! -d $current) {
+        mkdir($current) or die "mkdir $current: $!";
+        debug("Created directory: $current");
       }
+      $seen{$current}=1;
     }
-    return;
   }
+  return;
 }
 
 # Mirror cleanup for unknown files that cannot be found in Packages files.
