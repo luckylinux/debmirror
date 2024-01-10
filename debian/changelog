@@ -1,4 +1,4 @@
-debmirror (1:2.39) UNRELEASED; urgency=medium
+debmirror (1:2.39) unstable; urgency=medium
 
   * perlcritic fixes:
     - Move "use strict" above all code.
@@ -16,7 +16,7 @@ debmirror (1:2.39) UNRELEASED; urgency=medium
     - Avoid comma-separated statements.
     - Unpack @_ first in a few subroutines.
 
- -- Colin Watson <cjwatson@debian.org>  Fri, 22 Dec 2023 14:40:06 +0000
+ -- Colin Watson <cjwatson@debian.org>  Wed, 10 Jan 2024 00:55:39 +0000
 
 debmirror (1:2.38) unstable; urgency=medium
 
