@@ -47,7 +47,7 @@ for my $basename ('Translation-en', @file_i18n) {
         s/^(Description-md5:).*/$1 $md/m;
         print $f2 $_;
         $md{$pkg} = $md if $basename eq 'Translation-en';
-        defined($md) && defined($pkg) or die "$0: missing fields in i18n\n";
+        (defined($md) && defined($pkg)) or die "$0: missing fields in i18n\n";
     }
     unlink $tempfilename;
     close $f2;
