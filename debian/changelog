@@ -1,3 +1,10 @@
+debmirror (1:2.40) UNRELEASED; urgency=medium
+
+  * Update mirror-size script to handle the current Debian archive, and
+    refresh mirror_size documentation file (closes: #855247).
+
+ -- Colin Watson <cjwatson@debian.org>  Sun, 21 Jan 2024 02:11:38 +0000
+
 debmirror (1:2.39) unstable; urgency=medium
 
   * perlcritic fixes:

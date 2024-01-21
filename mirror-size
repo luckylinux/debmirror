@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# This script can be used on a mirror (or e.g. merkel.debian.org) to
+# This script can be used on a mirror (or e.g. coccia.debian.org) to
 # produce an overview of the size of the archive. The numbers reflect
 # the "raw" size of the archive: the size of packages and source files.
 # It does not include the size of files containing meta data, nor of
@@ -15,14 +15,16 @@ use Getopt::Long;
 use File::Temp qw/ tempfile /;
 use Compress::Zlib;
 
-our @arches= qw(source all i386 amd64 alpha arm armel hppa ia64 m68k mips mipsel powerpc s390 sparc kfreebsd-i386 kfreebsd-amd64);
-our @sects= qw(main contrib non-free main/debian-installer);
-our @suites= qw(oldstable stable testing unstable);
+our $root="/srv/ftp.debian.org/ftp/dists";
+our @arches= qw(source all amd64 arm64 armel armhf i386 mips mips64el mipsel ppc64el riscv64 s390x);
+our @comps= qw(main contrib non-free non-free-firmware main/debian-installer);
+our @suites= qw(oldoldstable oldstable stable testing unstable experimental);
 our %dists;
 our (@source_files, @package_files);
 our (%files, %sizes, %total, %width);
 
-our $root="/srv/ftp.debian.org/ftp/dists";
+GetOptions ("root=s" => \$root) or die "Error in command line arguments\n";
+
 chdir($root) or die "chdir $root: $!";
 
 my ($tfh, $tfile) = tempfile();
@@ -34,7 +36,13 @@ foreach my $suite (@suites) {
   next unless -f "$root/$suite/Release";
   if (open my $release, "<", "$root/$suite/Release") {
     while (<$release>) {
-      if (/^Codename:/) {
+      # Describe suites using their Codename, except for experimental; its
+      # Codename is technically "rc-buggy", but it's rarely called that in
+      # practice and we want something shorter anyway to make the table look
+      # nicer.
+      if ($suite eq "experimental") {
+	$dists{$suite} = "exp";
+      } elsif (/^Codename:/) {
 	($dists{$suite}) = m/^Codename:\s+(.*)/i;
 	last;
       }
@@ -42,19 +50,19 @@ foreach my $suite (@suites) {
     close $release;
   }
 
-  foreach my $sect (@sects) {
-    next unless -d "$root/$suite/$sect";
-    print(STDERR "Processing $suite $sect\n");
+  foreach my $comp (@comps) {
+    next unless -d "$root/$suite/$comp";
+    print(STDERR "Processing $suite $comp\n");
     foreach my $arch (@arches) {
       my $file;
       if ($arch eq "source") {
-	$file = "source/Sources.gz";
-	next unless -f "$root/$suite/$sect/$file";
-	parse_sources($file, $suite, $sect);
+	$file = "source/Sources.xz";
+	next unless -f "$root/$suite/$comp/$file";
+	parse_sources($file, $suite, $comp);
       } else {
-	$file = "binary-$arch/Packages.gz";
-	next unless -f "$root/$suite/$sect/$file";
-	parse_packages($file, $suite, $sect, $arch);
+	$file = "binary-$arch/Packages.xz";
+	next unless -f "$root/$suite/$comp/$file";
+	parse_packages($file, $suite, $comp, $arch);
       }
     }
   }
@@ -67,7 +75,7 @@ foreach my $suite (@suites) {
   $width{$suite} = exists $sizes{"d$suite"} ? 16 : 6;
 }
 
-print("Total archive size (binary + source) per section:\n\n");
+print("Total archive size (binary + source) per component:\n\n");
 printf("%10s ", "(in MiB)");
 foreach my $suite (@suites) {
   next unless exists $dists{$suite};
@@ -75,28 +83,30 @@ foreach my $suite (@suites) {
 }
 printf("| %6s\n", "all");
 print_ruler();
-foreach my $sect (@sects) {
-  next unless exists $sizes{all}{$sect};
-  if ($sect eq "main/debian-installer") {
+foreach my $comp (@comps) {
+  next unless exists $sizes{all}{$comp};
+  if ($comp eq "main/debian-installer") {
     printf("%-10s", "main/d-i");
+  } elsif ($comp eq "non-free-firmware") {
+    printf("%-10s", "non-free-f");
   } else {
-    printf("%-10s", $sect);
+    printf("%-10s", $comp);
   }
   foreach my $suite (@suites) {
     next unless exists $dists{$suite};
-    if (exists $sizes{$suite}{$sect}) {
-      $total{$suite} += $sizes{$suite}{$sect};
-      printf(" | %6i", int((1 + $sizes{$suite}{$sect}) /1024/1024));
-      if (exists $sizes{"d$suite"}{$sect}) {
-        $total{"d$suite"} += $sizes{"d$suite"}{$sect};
-        printf(" (+%6i)", int((1 + $sizes{"d$suite"}{$sect}) /1024/1024));
+    if (exists $sizes{$suite}{$comp}) {
+      $total{$suite} += $sizes{$suite}{$comp};
+      printf(" | %6i", int((1 + $sizes{$suite}{$comp}) /1024/1024));
+      if (exists $sizes{"d$suite"}{$comp}) {
+        $total{"d$suite"} += $sizes{"d$suite"}{$comp};
+        printf(" (+%6i)", int((1 + $sizes{"d$suite"}{$comp}) /1024/1024));
       }
     } else {
       print(" | " . (" " x $width{$suite}));
     }
   }
-  printf(" | %6i\n", int((1 + $sizes{all}{$sect}) /1024/1024));
-  $total{all} += $sizes{all}{$sect};
+  printf(" | %6i\n", int((1 + $sizes{all}{$comp}) /1024/1024));
+  $total{all} += $sizes{all}{$comp};
 }
 print_ruler();
 printf("%-9s ", "total");
@@ -150,10 +160,10 @@ sub print_ruler {
 }
 
 sub parse_packages {
-  my ($file, $suite, $sect, $arch) = @_;
+  my ($file, $suite, $comp, $arch) = @_;
   my ($line, $res, $size, $filename, $architecture);
   local $/ = "\n\n";
-  system_redirect_io("gzip -d", "$root/$suite/$sect/$file", "$tfile");
+  system_redirect_io("unxz", "$root/$suite/$comp/$file", "$tfile");
   open(my $tfh, "<", $tfile) or die "$tfile: $!";
   for (;;) {
     my $buf;
@@ -168,20 +178,22 @@ sub parse_packages {
     ($size) = m/^Size:\s+(\d+)/im;
 
     if (! exists $files{$filename}{$suite}) {
-      $sizes{$suite}{$sect} += $size;
+      $sizes{$suite}{$comp} += $size;
       $sizes{$suite}{$architecture} += $size;
-      if (($suite eq "stable" && exists $dists{oldstable} &&
+      if (($suite eq "oldstable" && exists $dists{oldoldstable} &&
+	   ! exists $files{$filename}{oldoldstable}) ||
+	  ($suite eq "stable" && exists $dists{oldstable} &&
 	   ! exists $files{$filename}{oldstable}) ||
 	  ($suite eq "testing" && exists $dists{stable} &&
 	   ! exists $files{$filename}{stable}) ||
 	  ($suite eq "unstable" && exists $dists{testing} &&
 	   ! exists $files{$filename}{testing})) {
-	$sizes{"d$suite"}{$sect} += $size;
+	$sizes{"d$suite"}{$comp} += $size;
 	$sizes{"d$suite"}{$architecture} += $size;
       }
     }
     if (! exists $files{$filename}{x}) {
-      $sizes{all}{$sect} += $size;
+      $sizes{all}{$comp} += $size;
       $sizes{all}{$architecture} += $size;
     }
     $files{$filename}{x} = 1;
@@ -191,10 +203,10 @@ sub parse_packages {
   return;
 }
 sub parse_sources {
-  my ($file, $suite, $sect) = @_;
-  my ($line, $res, $size, $directory, $filename, $md5sum);
+  my ($file, $suite, $comp) = @_;
+  my ($line, $res, $directory, $checksums, $hash, $size, $filename);
   local $/ = "\n\n";
-  system_redirect_io("gzip -d", "$root/$suite/$sect/$file", "$tfile");
+  system_redirect_io("unxz", "$root/$suite/$comp/$file", "$tfile");
   open(my $tfh, "<", $tfile) or die "$tfile: $!";
   for (;;) {
     my $buf;
@@ -204,26 +216,29 @@ sub parse_sources {
     }
     $_ = $buf;
     ($directory) = m/^Directory:\s+(.*)/im;
-    while (m/^ ([A-Za-z0-9]{32} .*)/mg) {
-      ($md5sum, $size, $filename)=split(' ', $1, 3);
+    ($checksums) = m/^Checksums-Sha256:\n((?: .*\n)+)/m;
+    foreach my $checksum_line (split /^/m, $checksums) {
+      ($hash, $size, $filename)=split(' ', $checksum_line, 3);
       $filename = "$directory/$filename";
       $filename =~ s:/+:/:; # remove redundant slashes in paths
 
       if (! exists $files{$filename}{$suite}) {
-	$sizes{$suite}{$sect} += $size;
+	$sizes{$suite}{$comp} += $size;
 	$sizes{$suite}{source} += $size;
-	if (($suite eq "stable" && exists $dists{oldstable} &&
+	if (($suite eq "oldstable" && exists $dists{oldoldstable} &&
+	     ! exists $files{$filename}{oldoldstable}) ||
+	    ($suite eq "stable" && exists $dists{oldstable} &&
 	     ! exists $files{$filename}{oldstable}) ||
 	    ($suite eq "testing" && exists $dists{stable} &&
 	     ! exists $files{$filename}{stable}) ||
 	    ($suite eq "unstable" && exists $dists{testing} &&
 	     ! exists $files{$filename}{testing})) {
-	  $sizes{"d$suite"}{$sect} += $size;
+	  $sizes{"d$suite"}{$comp} += $size;
 	  $sizes{"d$suite"}{source} += $size;
 	}
       }
       if (! exists $files{$filename}{x}) {
-	$sizes{all}{$sect} += $size;
+	$sizes{all}{$comp} += $size;
 	$sizes{all}{source} += $size;
       }
       $files{$filename}{x} = 1;
