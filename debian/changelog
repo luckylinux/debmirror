@@ -1,8 +1,8 @@
-debmirror (1:2.41) UNRELEASED; urgency=medium
+debmirror (1:2.41) unstable; urgency=medium
 
   * Refresh mirror_size documentation.
 
- -- Colin Watson <cjwatson@debian.org>  Mon, 01 Jul 2024 11:21:15 +0100
+ -- Colin Watson <cjwatson@debian.org>  Mon, 01 Jul 2024 11:21:41 +0100
 
 debmirror (1:2.40) unstable; urgency=medium
 
