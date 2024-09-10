@@ -3301,7 +3301,6 @@ sub do_contents_for_each_dist_arch_sect {
   my($routine, $routine_args, $operational_params) = @_;
   my @sects = ((map {"/$_"} @sections), "");
   foreach my $dist (keys %distset) {
-    next if $dist=~/\bexperimental\b|-proposed-updates\b/o;
     next unless exists $distset{$dist}{mirror};
     foreach my $arch (@arches, "all") {
       my %op_params = %$operational_params;
