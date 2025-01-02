@@ -1,3 +1,9 @@
+debmirror (1:2.43) UNRELEASED; urgency=medium
+
+  * Refresh mirror_size documentation.
+
+ -- Colin Watson <cjwatson@debian.org>  Thu, 02 Jan 2025 10:07:07 +0000
+
 debmirror (1:2.42) unstable; urgency=medium
 
   * Apply X-Style: black.
