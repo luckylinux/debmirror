@@ -1,6 +1,11 @@
 debmirror (1:2.43) UNRELEASED; urgency=medium
 
+  [ Colin Watson ]
   * Refresh mirror_size documentation.
+
+  [ Alexey Dobrovolskiy ]
+  * Correct and clarify several points in example debmirror.conf (closes:
+    #865024).
 
  -- Colin Watson <cjwatson@debian.org>  Thu, 02 Jan 2025 10:07:07 +0000
 
