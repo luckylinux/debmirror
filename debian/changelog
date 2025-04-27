@@ -1,3 +1,9 @@
+debmirror (1:2.44) UNRELEASED; urgency=medium
+
+  * Hide HTTP(S) credentials from progress output (closes: #1104091).
+
+ -- Colin Watson <cjwatson@debian.org>  Sun, 27 Apr 2025 18:50:30 +0100
+
 debmirror (1:2.43) unstable; urgency=medium
 
   [ Colin Watson ]

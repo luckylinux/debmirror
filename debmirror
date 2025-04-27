@@ -599,6 +599,7 @@ use Digest::SHA;
 use if $] lt "5.022", "Net::INET6Glue";
 use Net::FTP;
 use LWP::UserAgent;
+use MIME::Base64;
 
 our $version="1:2.29";
 
@@ -930,6 +931,10 @@ sub init_connection {
     $ua->proxy('http', $ENV{http_proxy}) if $ENV{http_proxy};
     $ua->proxy('http', $proxy) if $proxy;
     $ua->show_progress($progress);
+    if ($user ne 'anonymous') {
+      my $auth = encode_base64("$user:$passwd", '');
+      $ua->default_header(Authorization => "Basic $auth");
+    }
     return;
   };
 
@@ -940,6 +945,10 @@ sub init_connection {
     $ua->proxy('https', $ENV{https_proxy}) if $ENV{https_proxy};
     $ua->proxy('https', $proxy) if $proxy;
     $ua->show_progress($progress);
+    if ($user ne 'anonymous') {
+      my $auth = encode_base64("$user:$passwd", '');
+      $ua->default_header(Authorization => "Basic $auth");
+    }
     return;
   };
 
@@ -1800,13 +1809,7 @@ sub print_percent {
 sub http_get {
   local $| = 1;
   my $file=shift;
-  my $url;
-  if ($user eq 'anonymous'){
-    $url="$download_method://${host}/${remoteroot}/${file}";
-  }
-  else {
-    $url="$download_method://${user}:${passwd}\@${host}/${remoteroot}/${file}";
-  }
+  my $url="$download_method://${host}/${remoteroot}/${file}";
   my $ret=1;
 
   print "$url => " if $debug;
