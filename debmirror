@@ -2388,7 +2388,7 @@ sub name_release {
 
   if ($origin eq "none") {
     $codename = $dist_raw;
-  } elsif ($origin eq "Ubuntu" or $origin eq "Canonical" or $origin eq "UbuntuESM") {
+  } elsif ($origin eq "Ubuntu" or $origin eq "Canonical" or $origin eq "UbuntuESM" or $origin eq "UbuntuESMApps") {
     if ($suite) {
       say("Ubuntu Release file: using Suite ($suite).");
       $codename = $suite;
