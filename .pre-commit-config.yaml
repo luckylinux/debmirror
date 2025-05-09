@@ -2,7 +2,7 @@
 # See https://pre-commit.com/hooks.html for more hooks
 repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v5.0.0
     hooks:
     -   id: check-added-large-files
     -   id: check-yaml
@@ -11,7 +11,7 @@ repos:
     -   id: trailing-whitespace
         exclude: ^test/script-data/
 -   repo: https://github.com/scop/pre-commit-perlcritic
-    rev: v1.152-1
+    rev: v1.156-1
     hooks:
     -   id: perlcritic
         args: [--stern]
