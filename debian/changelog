@@ -1,9 +1,9 @@
-debmirror (1:2.45) UNRELEASED; urgency=medium
+debmirror (1:2.45) unstable; urgency=medium
 
   [ Sascha Lucas ]
   * Add support for Ubuntu ESMApps.
 
- -- Colin Watson <cjwatson@debian.org>  Fri, 09 May 2025 13:58:43 +0100
+ -- Colin Watson <cjwatson@debian.org>  Fri, 09 May 2025 14:00:01 +0100
 
 debmirror (1:2.44) unstable; urgency=medium
 
