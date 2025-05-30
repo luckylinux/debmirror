@@ -1,3 +1,9 @@
+debmirror (1:2.46) UNRELEASED; urgency=medium
+
+  * Add a simple autopkgtest.
+
+ -- Colin Watson <cjwatson@debian.org>  Fri, 30 May 2025 01:11:25 +0100
+
 debmirror (1:2.45) unstable; urgency=medium
 
   [ Sascha Lucas ]
