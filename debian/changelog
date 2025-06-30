@@ -1,4 +1,4 @@
-debmirror (1:2.47) UNRELEASED; urgency=medium
+debmirror (1:2.47) unstable; urgency=medium
 
   [ Colin Watson ]
   * Refresh mirror_size documentation.
@@ -6,7 +6,7 @@ debmirror (1:2.47) UNRELEASED; urgency=medium
   [ Christoph Goehre ]
   * Create directories for installer before using them (closes: #1108274).
 
- -- Colin Watson <cjwatson@debian.org>  Tue, 01 Jul 2025 00:39:08 +0100
+ -- Colin Watson <cjwatson@debian.org>  Tue, 01 Jul 2025 00:58:44 +0100
 
 debmirror (1:2.46) unstable; urgency=medium
 
