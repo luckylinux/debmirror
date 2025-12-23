@@ -14,9 +14,10 @@ use Cwd;
 use Getopt::Long;
 use File::Temp qw/ tempfile /;
 use Compress::Zlib;
+use List::Util qw(max);
 
 our $root="/srv/ftp.debian.org/ftp/dists";
-our @arches= qw(source all amd64 arm64 armel armhf i386 mips mips64el mipsel ppc64el riscv64 s390x);
+our @arches= qw(source all amd64 arm64 armel armhf i386 loong64 mips64el mipsel ppc64el riscv64 s390x);
 our @comps= qw(main contrib non-free non-free-firmware main/debian-installer);
 our @suites= qw(oldoldstable oldstable stable testing unstable experimental);
 our %dists;
@@ -73,6 +74,7 @@ foreach my $suite (@suites) {
 foreach my $suite (@suites) {
   next unless exists $dists{$suite};
   $width{$suite} = exists $sizes{"d$suite"} ? 16 : 6;
+  $width{$suite} = max(length($dists{$suite}), $width{$suite});
 }
 
 print("Total archive size (binary + source) per component:\n\n");
@@ -81,7 +83,7 @@ foreach my $suite (@suites) {
   next unless exists $dists{$suite};
   printf("| %$width{$suite}s ", $dists{$suite});
 }
-printf("| %6s\n", "all");
+printf("| %7s\n", "all");
 print_ruler();
 foreach my $comp (@comps) {
   next unless exists $sizes{all}{$comp};
@@ -96,24 +98,26 @@ foreach my $comp (@comps) {
     next unless exists $dists{$suite};
     if (exists $sizes{$suite}{$comp}) {
       $total{$suite} += $sizes{$suite}{$comp};
-      printf(" | %6i", int((1 + $sizes{$suite}{$comp}) /1024/1024));
+      my $strsize = sprintf("%6i", int((1 + $sizes{$suite}{$comp}) /1024/1024));
       if (exists $sizes{"d$suite"}{$comp}) {
         $total{"d$suite"} += $sizes{"d$suite"}{$comp};
-        printf(" (+%6i)", int((1 + $sizes{"d$suite"}{$comp}) /1024/1024));
+        $strsize .= sprintf(" (+%6i)", int((1 + $sizes{"d$suite"}{$comp}) /1024/1024));
       }
+      printf(" | %$width{$suite}s", $strsize);
     } else {
       print(" | " . (" " x $width{$suite}));
     }
   }
-  printf(" | %6i\n", int((1 + $sizes{all}{$comp}) /1024/1024));
+  printf(" | %7i\n", int((1 + $sizes{all}{$comp}) /1024/1024));
   $total{all} += $sizes{all}{$comp};
 }
 print_ruler();
 printf("%-9s ", "total");
 foreach my $suite (@suites) {
   next unless exists $dists{$suite};
-  printf(" | %6i", int((1 + $total{$suite}) /1024/1024));
-  printf(" (+%6i)", int((1 + $total{"d$suite"}) /1024/1024)) if exists $total{"d$suite"};
+  my $strsize = sprintf("%6i", int((1 + $total{$suite}) /1024/1024));
+  $strsize .= sprintf(" (+%6i)", int((1 + $total{"d$suite"}) /1024/1024)) if exists $total{"d$suite"};
+  printf(" | %$width{$suite}s", $strsize);
 }
 printf(" | %6i", int((1 + $total{all}) /1024/1024)."\n");
 
@@ -124,7 +128,7 @@ foreach my $suite (@suites) {
   next unless exists $dists{$suite};
   printf("| %$width{$suite}s ", $dists{$suite});
 }
-printf("| %6s\n", "all");
+printf("| %7s\n", "all");
 print_ruler();
 foreach my $arch (@arches) {
   next unless exists $sizes{all}{$arch};
@@ -134,13 +138,14 @@ foreach my $arch (@arches) {
   foreach my $suite (@suites) {
     next unless exists $dists{$suite};
     if (exists $sizes{$suite}{$arch}) {
-      printf(" | %6i", int((1 + $sizes{$suite}{$arch}) /1024/1024));
-      printf(" (+%6i)", int((1 + $sizes{"d$suite"}{$arch}) /1024/1024)) if exists $sizes{"d$suite"}{$arch};
+      my $strsize = sprintf("%6i", int((1 + $sizes{$suite}{$arch}) /1024/1024));
+      $strsize .= sprintf(" (+%6i)", int((1 + $sizes{"d$suite"}{$arch}) /1024/1024)) if exists $sizes{"d$suite"}{$arch};
+      printf(" | %$width{$suite}s", $strsize);
     } else {
       printf(" | " . (" " x $width{$suite}));
     }
   }
-  printf(" | %6i\n", int((1 + $sizes{all}{$arch}) /1024/1024));
+  printf(" | %7i\n", int((1 + $sizes{all}{$arch}) /1024/1024));
 }
 
 my @ts=gmtime(time());
@@ -155,7 +160,7 @@ sub print_ruler {
     next unless exists $dists{$suite};
     print("|" . "-" x ($width{$suite} + 2));
   }
-  print("|" . "-" x 7 . "\n");
+  print("|" . "-" x 8 . "\n");
   return;
 }
 
