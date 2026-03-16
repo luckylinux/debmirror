@@ -263,11 +263,11 @@ to use these two options together.
 
 Don't fail if the F<Release> file is missing.
 
-=item <--dists-subpath>
+=item B<--dists-subpath>
 
-Add a <dists/> extra Path after <root>.
+Add a B<dists/> extra Path after <root>.
 
-=item <--flat-structure>, <--no-flat-structure>
+=item B<--flat-structure>, B<--no-flat-structure>
 
 <Packages> Lists are/aren't stored inside a <binary-ARCH> subfolder.
 
