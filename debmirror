@@ -140,6 +140,10 @@ Specifies the http proxy (like Squid) to use for http or ftp methods.
 
 Specifies the User Agent String to use for http(s) requests.
 
+Some Custom Mirrors, particularly those on / behind Cloudflare, will simply reject "normal" Requests made by I<debmirror>, resulting in a HTTP 403 / Forbidden Error.
+
+Setting the User Agent using e.g. I<--user-agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"> will allow I<debmirror> to successfully mirror those Repositories.
+
 =item B<-d>, B<--dist>=I<foo[,bar,..]>
 
 Specify the distribution (etch, lenny, squeeze, sid) of Debian to
