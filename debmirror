@@ -269,12 +269,12 @@ Add a B<dists/> extra Path after <root>.
 
 =item B<--flat-structure>, B<--no-flat-structure>
 
-<Packages> Lists are/aren't stored inside a <binary-ARCH> subfolder.
+F<Packages> Lists are/aren't stored inside a F<binary-ARCH> subfolder.
 
 =item B<--check-gpg>, B<--no-check-gpg>
 
-Controls whether gpg signatures from the F<Release.gpg> file should be
-checked. The default is to check signatures.
+Controls whether gpg signatures from the F<Release.gpg> B<and> F<InRelease> files
+should be checked. The default is to check signatures.
 
 =item B<--check-gpg-release>, B<--no-check-gpg-release>
 
