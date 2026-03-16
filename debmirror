@@ -102,6 +102,10 @@ Print version number and exit.
 Specify the remote host to mirror from. Defaults to I<ftp.debian.org>,
 you are strongly encouraged to find a closer mirror.
 
+=item B<-c>, B<--codename>=I<codename>
+
+Specify an alternate codename to use instead of what is found in I<Release> or I<InRelease> File to use in the download Path,
+
 =item B<-r>, B<--root>=I<directory>
 
 Specifies the directory on the remote host that is the root of the Debian
@@ -131,6 +135,10 @@ It is used with B<--user> and defaults to C<anonymous@>.
 =item B<--proxy>=I<http://user:pass@url:port/>
 
 Specifies the http proxy (like Squid) to use for http or ftp methods.
+
+=item U<--user-agent=I<USER_AGENT_STRING>
+
+Specifies the User Agent String to use for http(s) requests.
 
 =item B<-d>, B<--dist>=I<foo[,bar,..]>
 
@@ -255,9 +263,27 @@ to use these two options together.
 
 Don't fail if the F<Release> file is missing.
 
+=item <--dists-subpath>
+
+Add a <dists/> extra Path after <root>.
+
+=item <--flat-structure>, <--no-flat-structure>
+
+<Packages> Lists are/aren't stored inside a <binary-ARCH> subfolder.
+
 =item B<--check-gpg>, B<--no-check-gpg>
 
 Controls whether gpg signatures from the F<Release.gpg> file should be
+checked. The default is to check signatures.
+
+=item B<--check-gpg-release>, B<--no-check-gpg-release>
+
+Controls whether gpg signatures from the F<Release.gpg> file should be
+checked. The default is to check signatures.
+
+=item B<--check-gpg-inrelease>, B<--no-check-gpg-inrelease>
+
+Controls whether gpg signatures from the F<InRelease> file should be
 checked. The default is to check signatures.
 
 =item B<--keyring>=I<file>
@@ -600,8 +626,9 @@ use if $] lt "5.022", "Net::INET6Glue";
 use Net::FTP;
 use LWP::UserAgent;
 use MIME::Base64;
+use URI ();
 
-our $version="1:2.29";
+our $version="1:2.47";
 
 # Yeah, I use too many global variables in this program.
 our $mirrordir;
@@ -618,7 +645,9 @@ our $pre_cleanup=0;
 our $post_cleanup=1;
 our $no_cleanup=0;
 our $do_source=1;
+our $user_agent="";
 our $host="ftp.debian.org";
+our $codename="";
 our $user="anonymous";
 our $passwd="anonymous@";
 our $remoteroot="debian";
@@ -648,7 +677,11 @@ our $debmarshal=0;
 our $disable_ssl_verification;
 our $retry_rsync_packages=1;
 our $slow_cpu=0;
+our $dists_subpath=1;
+our $flat_structure=0;
 our $check_gpg=1;
+our $check_gpg_release=1;
+our $check_gpg_inrelease=1;
 our $new_mirror=0;
 our $retry_rsync_packages_delay=30; # seconds
 my @errlog;
@@ -730,10 +763,12 @@ GetOptions('debug'                  => \$debug,
            'md5sums|m'              => \$verify_checksums, # back compat
            'passive!'               => \$passive,
            'host|h=s'               => \$host,
+           'codename|c=s'           => \$codename,
            'user|u=s'               => \$user,
            'passwd=s'               => \$passwd,
            'root|r=s'               => \$remoteroot,
            'dist|d=s'               => \@dists,
+           'user-agent=s'	    => \$user_agent,
            'section|s=s'            => \@sections,
            'arch|a=s'               => \@arches,
            'di-dist=s'              => \@di_dists,
@@ -760,7 +795,11 @@ GetOptions('debug'                  => \$debug,
            'state-cache-days=s'     => \$state_cache_days,
            'ignore-missing-release' => \$ignore_missing_release,
            'ignore-release-gpg'     => \$ignore_release_gpg,
+           'dists-subpath!'         => \$dists_subpath,
+           'flat-structure!'        => \$flat_structure,
            'check-gpg!'             => \$check_gpg,
+           'check-gpg-release!'     => \$check_gpg_release,
+           'check-gpg-inrelease!'   => \$check_gpg_inrelease,
            'dry-run'                => \$dry_run,
            'proxy=s'                => \$proxy,
            'rsync-options=s'        => \$rsync_options,
@@ -815,15 +854,34 @@ if (!($diff_mode eq "none")) {
 # Backwards compatibility: remote root dir no longer needs prefix
 $remoteroot =~ s%^[:/]%% unless downloads_via_file();
 
+# Debug
+say("remoteroot: $remoteroot");
+
 # Post-process arrays. Allow commas to separate values the user entered.
-# If the user entered nothing, provide defaults.
 @dists=split(/,/,join(',',@dists));
-@dists=qw(sid) unless @dists;
+
+# Post-process arrays. Allow commas to separate values the user entered.
+@keyrings=split(/,/,join(',',@keyrings));
+
+
+# If the user entered nothing, provide defaults.
+# @dists=qw(sid) unless @dists;
+
+# Leave dists empty by Default
+@dists=qw(none) unless @dists;
+
+# Post-process arrays. Allow commas to separate values the user entered.
 @sections=split(/,/,join(',',@sections));
-@sections=qw(main contrib non-free non-free-firmware main/debian-installer) unless @sections;
+
+# If the user entered nothing, provide defaults.
+# @sections=qw(main contrib non-free non-free-firmware main/debian-installer) unless @sections;
+
+# Leave sections empty by Default
+@sections=qw(none) unless @sections;
+
 @arches=split(/,/,join(',',@arches));
-@arches=qw(i386) unless @arches;
-@arches=() if (join(',',@arches) eq "none");
+@arches=qw(amd64) unless @arches;
+@arches=qw(none) if (join(',',@arches) eq "none");
 @di_dists=split(/,/,join(',',@di_dists));
 @di_arches=split(/,/,join(',',@di_arches));
 if (@di_dists) {
@@ -850,12 +908,12 @@ $post_cleanup=0 if ($debmarshal);
 local $|=1 if $debug;
 if ($passwd eq "anonymous@") {
   if (downloads_via_http()) {
-    say("Mirroring to $mirrordir from $download_method://$host/$remoteroot/");
+    say("Mirroring to $mirrordir from ", URI->new_abs($remoteroot, "$download_method://$host"));
   } else {
-    say("Mirroring to $mirrordir from $download_method://$user\@$host/$remoteroot/");
+    say("Mirroring to $mirrordir from ", URI->new_abs($remoteroot, "$download_method://$user\@$host"));
   }
 } else {
-  say("Mirroring to $mirrordir from $download_method://$user:XXX\@$host/$remoteroot/");
+    say("Mirroring to $mirrordir from ", URI->new_abs($remoteroot, "$download_method://$user:XXX\@$host"));
 }
 say("Arches: ".join(",", @arches));
 say("Dists: ".join(",", @dists));
@@ -866,7 +924,11 @@ say("D-I dists: ".join(",", @di_dists)) if @di_dists;
 say("Pdiff mode: $diff_mode");
 say("Slow CPU mode.") if $slow_cpu;
 say("Verifying checksums.") if $verify_checksums;
+say("Don't add a <dists> Path Element after <root>.") if ! $dists_subpath;
+say("Using Flat Structure.") if ! $flat_structure;
 say("Not checking Release gpg signatures.") if ! $check_gpg;
+say("Not checking Release.gpg signatures.") if ! $check_gpg_release;
+say("Not checking InRelease signatures.") if ! $check_gpg_inrelease;
 say("Passive mode on.") if $passive;
 say("Proxy: $proxy") if $proxy;
 say("Download at most $max_batch files.") if ($max_batch > 0);
@@ -931,6 +993,12 @@ sub init_connection {
     $ua->proxy('http', $ENV{http_proxy}) if $ENV{http_proxy};
     $ua->proxy('http', $proxy) if $proxy;
     $ua->show_progress($progress);
+
+    if ($user_agent ne "") {
+      say("Use $user_agent as HTTP User Agent");
+      $ua->agent($user_agent)
+    }
+
     if ($user ne 'anonymous') {
       my $auth = encode_base64("$user:$passwd", '');
       $ua->default_header(Authorization => "Basic $auth");
@@ -945,6 +1013,12 @@ sub init_connection {
     $ua->proxy('https', $ENV{https_proxy}) if $ENV{https_proxy};
     $ua->proxy('https', $proxy) if $proxy;
     $ua->show_progress($progress);
+
+    if ($user_agent ne "") {
+      say("Use $user_agent as HTTP User Agent");
+      $ua->agent($user_agent);
+    }
+
     if ($user ne 'anonymous') {
       my $auth = encode_base64("$user:$passwd", '');
       $ua->default_header(Authorization => "Basic $auth");
@@ -1012,38 +1086,82 @@ rsync_extra(1, @rsync_extra);
 say("Getting meta files ...");
 $ua->default_header( "Cache-Control" => "max-age=0" ) if ($ua);
 foreach my $dist (@dists) {
-  my $tdir="$tempdir/.tmp/dists/$dist";
+  my $tdir;
+
+  # Debug
+  say("Dist is <$dist>");
+
+  if ($dist eq "none"){
+    # $tdir = "$tempdir/.tmp/dists/_";
+    $tdir = "$tempdir/.tmp";
+  }
+  else {
+    if ($dists_subpath) {
+      $tdir = "$tempdir/.tmp/dists/$dist"; 
+    } else {
+      $tdir = "$tempdir/.tmp/$dist"; 
+    }
+  }
+
+  # Debug
+  say("tdir is <$tdir>");
+
   my $have_release = get_release($tdir, $dist);
   next unless ($have_release || $ignore_missing_release);
   my ($codename, $suite, $dist_sdir) = name_release("mirror", $tdir, $dist);
 
   if ($have_release) {
     my $next;
-    make_dir ("dists/$codename$dist_sdir");
-    make_dir ("$tempdir/dists/$codename$dist_sdir");
-    rename("$tdir/Release", "$tempdir/dists/$codename$dist_sdir/Release")
-      or die "Error while moving $tdir/Release: $!\n";
-    $files{"dists/$codename$dist_sdir/Release"}=1;
-    $files{$tempdir."/"."dists/$codename$dist_sdir/Release"}=1;
+
+    my $subpath;
+    my $separator;
+    if ($dist eq "none"){
+      $subpath = "";
+      $separator = "";
+    }
+    else {
+      #$subpath = "dists/$codename$dist_sdir";
+      #$separator = "/";
+      if ($dists_subpath) {
+        $subpath = "dists/$codename$dist_sdir";
+        $separator = "/";
+      } else {
+        $subpath = "$codename$dist_sdir";
+        $separator = "/";
+      }
+    }
+
+    # Debug
+    say("Subpath is $subpath");
+
+    # Debug
+    say("Store Release ==> $tempdir/${subpath}${separator}Release");
+
+    make_dir ("$subpath");
+    make_dir ("$tempdir/$subpath");
+    rename("$tdir/Release", "$tempdir/${subpath}${separator}Release");
+    #  or die "Error while moving $tdir/Release: $!\n";
+    $files{"${subpath}${separator}Release"}=1;
+    $files{$tempdir."/"."${subpath}${separator}Release"}=1;
     if ($debmarshal) {
       $next = make_next_snapshot($mirrordir,$dist,$codename,
                                             $dist_sdir,$tempdir);
     }
     if (-f "$tdir/Release.gpg") {
-      rename("$tdir/Release.gpg", "$tempdir/dists/$codename$dist_sdir/Release.gpg")
-        or die "Error while moving $tdir/Release.gpg: $!\n";
-      $files{"dists/$codename$dist_sdir/Release.gpg"}=1;
-      $files{$tempdir."/"."dists/$codename$dist_sdir/Release.gpg"}=1;
+      rename("$tdir/Release.gpg", "$tempdir/${subpath}${separator}Release.gpg");
+      #  or die "Error while moving $tdir/Release.gpg: $!\n";
+      $files{"${subpath}${separator}Release.gpg"}=1;
+      $files{$tempdir."/"."${subpath}${separator}Release.gpg"}=1;
       if ($debmarshal) {
         link_release_into_snapshot($mirrordir,$dist,$next,$tempdir,
                                    $codename,$dist_sdir,"Release.gpg");
       }
     }
     if (-f "$tdir/InRelease") {
-      rename("$tdir/InRelease", "$tempdir/dists/$codename$dist_sdir/InRelease")
-        or die "Error while moving $tdir/InRelease: $!\n";
-      $files{"dists/$codename$dist_sdir/InRelease"}=1;
-      $files{$tempdir."/"."dists/$codename$dist_sdir/InRelease"}=1;
+      rename("$tdir/InRelease", "$tempdir/${subpath}${separator}InRelease");
+      #  or die "Error while moving $tdir/InRelease: $!\n";
+      $files{"${subpath}${separator}InRelease"}=1;
+      $files{$tempdir."/"."${subpath}${separator}InRelease"}=1;
       if ($debmarshal) {
         link_release_into_snapshot($mirrordir,$dist,$next,$tempdir,
                                    $codename,$dist_sdir,"InRelease");
@@ -1057,8 +1175,25 @@ di_check_dists() if @di_dists;
 
 foreach my $dist (keys %distset) {
   next unless exists $distset{$dist}{mirror};
+
+  my $subpath;
+  if ($dist eq "none") {
+    $subpath = "";
+  }
+  else {
+    if ($dists_subpath) {
+      $subpath = "dists/$dist";
+      # $separator = "/";
+    } else {
+      $subpath = "$dist";
+      # $separator = "/";
+    }
+    # $subpath = "dists/$dist";
+  }
+
+
   # Parse the Release and extract the files listed for all checksum types.
-  if (open my $release, "<", "$tempdir/dists/$dist/Release") {
+  if (open my $release, "<", "$tempdir/$subpath/Release") {
     my $checksum_type;
     while (<$release>) {
         if (/^(MD5Sum|SHA\d+):/) {
@@ -1066,8 +1201,8 @@ foreach my $dist (keys %distset) {
         }
         elsif (/^ / && defined $checksum_type) {
                 my ($checksum, $size, $filename) = /^ +([a-z0-9]+) +(\d+) +(.*)$/;
-                $file_lists{"$tempdir/dists/$dist/$filename"}{$checksum_type} = $checksum;
-                $file_lists{"$tempdir/dists/$dist/$filename"}{size} = $size;
+                $file_lists{"$tempdir/$subpath/$filename"}{$checksum_type} = $checksum;
+                $file_lists{"$tempdir/$subpath/$filename"}{size} = $size;
         }
     }
     close $release;
@@ -1082,7 +1217,7 @@ if ($num_errors != 0 && $ignore_missing_release) {
 
 if ($num_errors != 0) {
   print "Errors:\n ".join(" ",@errlog) if (@errlog);
-  die "Failed to download some Release, Release.gpg or InRelease files!\n";
+  die "Failed to download some Release, Release.gpg or InRelease files or failed GPG Signature Validation!\n";
 }
 
 # Enable caching again for http
@@ -1106,21 +1241,84 @@ foreach my $dist (keys %distset) {
   next unless exists $distset{$dist}{mirror};
   foreach my $section (@sections) {
     foreach my $arch (@arches, "all") {
-      add_bytes("dists/$dist/$section/binary-$arch/Packages");
-      add_bytes("dists/$dist/$section/binary-$arch/Packages.gz");
-      add_bytes("dists/$dist/$section/binary-$arch/Packages.xz");
-      add_bytes("dists/$dist/$section/binary-$arch/Release");
-      add_bytes("dists/$dist/$section/binary-$arch/Packages.diff/Index") unless ($diff_mode eq "none");
+      my $subpath;
+      my $separator;
+      my $section_subpath;
+
+      if ($section ne "none") {
+        $section_subpath = "/$section";
+      } else {        
+        $section_subpath = "";
+      }
+
+      if ($dist eq "none") {
+        $subpath = "";
+        $separator = "";
+      }
+      else {
+        if ($dists_subpath) {
+            $subpath = "dists/$dist$section_subpath";
+            $separator = "/";
+        } else {
+          $subpath = "$dist$section_subpath";
+          $separator = "/";
+        }
+        #$subpath = "dists/$dist/$section";
+        #$separator = "/";
+      }
+
+      # Debug
+      say("Processing Architecture $arch");
+      my $arch_subpath;
+
+      if (!$flat_structure) {
+        $arch_subpath = "binary-$arch/"
+      } else {
+        $arch_subpath = ""
+      }
+
+      add_bytes("${subpath}${separator}${arch_subpath}Packages");
+      add_bytes("${subpath}${separator}${arch_subpath}Packages.gz");
+      add_bytes("${subpath}${separator}${arch_subpath}Packages.xz");
+      add_bytes("${subpath}${separator}${arch_subpath}Release");
+      add_bytes("${subpath}${separator}${arch_subpath}Packages.diff/Index") unless ($diff_mode eq "none");
     }
+
+    my $subpath;
+    my $separator;
+    my $section_subpath;
+
+    if ($section ne "none") {
+      $section_subpath = "/$section";
+    } else {
+      $section_subpath = "";
+    }
+
+    if ($dist eq "none") {
+      $subpath = "";
+      $separator = "";
+    }
+    else {
+      #$subpath = "dists/$dist/$section";
+      #$separator = "/";
+      if ($dists_subpath) {
+        $subpath = "dists/$dist$section_subpath";
+        $separator = "/";
+      } else {
+        $subpath = "$dist$section_subpath";
+        $separator = "/";
+      }
+    }
+
     # d-i does not have separate source sections
     if ($do_source && $section !~ /debian-installer/) {
-      add_bytes("dists/$dist/$section/source/Sources");
-      add_bytes("dists/$dist/$section/source/Sources.gz");
-      add_bytes("dists/$dist/$section/source/Sources.xz");
-      add_bytes("dists/$dist/$section/source/Release");
-      add_bytes("dists/$dist/$section/source/Sources.diff/Index") unless ($diff_mode eq "none");
+      add_bytes("${subpath}${separator}source/Sources");
+      add_bytes("${subpath}${separator}source/Sources.gz");
+      add_bytes("${subpath}${separator}source/Sources.xz");
+      add_bytes("${subpath}${separator}source/Release");
+      add_bytes("${subpath}${separator}source/Sources.diff/Index") unless ($diff_mode eq "none");
     }
-    add_bytes("dists/$dist/$section/i18n/Index");
+    add_bytes("${subpath}${separator}i18n/Index");
   }
 }
 
@@ -1133,15 +1331,49 @@ my (@package_files, @source_files);
 foreach my $dist (keys %distset) {
   next unless exists $distset{$dist}{mirror};
   foreach my $section (@sections) {
+    my $subpath;
+    my $section_subpath;
+
+    if ($section ne "none") {
+      $section_subpath = "/$section";
+    } else {
+      $section_subpath = "";
+    }
+
+    if ($dist eq "none") {
+      $subpath = "";
+    }
+    else {
+      # $subpath = "dists/$dist/$section";
+      if ($dists_subpath) {
+        $subpath = "dists/$dist$section_subpath";
+        #$separator = "/";
+      } else {
+        $subpath = "$dist$section_subpath";
+        #$separator = "/";
+      }
+    }
+
+    my $arch_subpath;
+
     # some suites don't have d-i
     next if ($section =~ /debian-installer/ && di_skip_dist($dist) );
     foreach my $arch (@arches, "all") {
-      get_index("dists/$dist/$section/binary-$arch", "Packages");
+      
+      say("Processing Architecture ${arch} and downloading Packages/Sources List");
+
+      if (!$flat_structure) {
+        $arch_subpath = "/binary-$arch"
+      } else {
+        $arch_subpath = ""
+      }
+
+      get_index("$subpath${arch_subpath}", "Packages");
       link_index($dist,$section,$arch) if $debmarshal;
     }
     # d-i does not have separate source sections
     if ($do_source && $section !~ /debian-installer/) {
-      get_index("dists/$dist/$section/source", "Sources");
+      get_index("$subpath/source", "Sources");
       link_index($dist,$section,"source") if $debmarshal;
     }
   }
@@ -1181,12 +1413,29 @@ if ($getcontents) {
     # In Debian Wheezy, the Contents-*.gz moved to '/dists/$dist/$sect/'.
     # This handles the new location, but also checks the old location
     # for backwards compatibility.
-    if ($diff_mode ne "none") {
-      if (!update_contents("dists/$dist$sect", "Contents-$arch")) {
-        add_bytes("dists/$dist$sect/Contents-$arch.gz");
+
+    my $subpath;
+    if ($dist eq "none") {
+      $subpath = "";
+    }
+    else {
+      #$subpath = "dists/$dist$sect";
+      if ($dists_subpath) {
+        $subpath = "dists/$dist$sect";
+        #$separator = "/";
+      } else {
+        $subpath = "$dist$sect";
+        #$separator = "/";
       }
-    } elsif (!check_lists("$tempdir/dists/$dist$sect/Contents-$arch.gz")) {
-      add_bytes("dists/$dist$sect/Contents-$arch.gz");
+    }
+
+
+    if ($diff_mode ne "none") {
+      if (!update_contents("$subpath", "Contents-$arch")) {
+        add_bytes("$subpath/Contents-$arch.gz");
+      }
+    } elsif (!check_lists("$tempdir/$subpath/Contents-$arch.gz")) {
+      add_bytes("$subpath/Contents-$arch.gz");
     }
   };
   do_contents_for_each_dist_arch_sect(
@@ -1196,9 +1445,15 @@ if ($getcontents) {
 foreach my $dist (keys %distset) {
   next unless exists $distset{$dist}{mirror};
   foreach my $section (@sections) {
-    i18n_from_release($dist,"$section/i18n");
-    dep11_from_release($dist,"$section/dep11");
-    cnf_from_release($dist,"$section/cnf");
+    if ($section ne "none") {
+      i18n_from_release($dist,"$section/i18n");
+      dep11_from_release($dist,"$section/dep11");
+      cnf_from_release($dist,"$section/cnf");
+    } else {
+      i18n_from_release($dist,"i18n");
+      dep11_from_release($dist,"dep11");
+      cnf_from_release($dist,"cnf");
+    }
   }
 }
 
@@ -1234,13 +1489,20 @@ say("Parsing Packages and Sources files ...");
       my ($filename)=m/^Filename:\s+(.*)/im;
       $filename=~s:/+:/:;	# remove redundant slashes in paths
       my ($deb_section)=m/^Section:\s+(.*)/im;
+
+      # Debug
+      # say("Extracted Section: $deb_section");
+
       my ($deb_priority)=m/^Priority:\s+(.*)/im;
       my ($architecture)=m/^Architecture:\s+(.*)/im;
       next if (!$arches{$architecture});
       if(!(defined($include) && ($filename=~/$include/o))) {
         next if (defined($exclude) && $filename=~/$exclude/o);
+
+        # 20260315 - Attempt to see if this is preventing download due to different name in components/section
         next if (defined($exclude_deb_section) && defined($deb_section)
                  && $deb_section=~/$exclude_deb_section/o);
+
         next if (defined($limit_priority) && defined($deb_priority)
                  && ! ($deb_priority=~/$limit_priority/o));
       }
@@ -1772,6 +2034,12 @@ sub remote_get {
   my $res;
   return 1 if ($skippackages);
   $tdir=$tempdir unless $tdir;
+
+  # Debug
+  say("remote_get: tdir: $tdir");
+  say("remote_get: temp_dir: $tempdir");
+  say("remote_get: file: $file");
+
   chdir($tdir) or die "unable to chdir($tdir): $!\n";
 
   if (uses_LWP()) {
@@ -1809,11 +2077,24 @@ sub print_percent {
 sub http_get {
   local $| = 1;
   my $file=shift;
-  my $url="$download_method://${host}/${remoteroot}/${file}";
+  my $url;
+  if ($user eq 'anonymous'){
+    $url = URI->new_abs("${remoteroot}/${file}", "$download_method://$host");
+  }
+  else {
+    $url = URI->new_abs("${remoteroot}/${file}", "$download_method://${user}:${passwd}\@$host");
+  }
   my $ret=1;
 
+  # Debug
+  # use Cwd qw();
+  # my $path = Cwd::cwd();
+  # print "Current Working Directory is: $path\n";
+
   print "$url => " if $debug;
-  print_percent "Getting: $file... " if $progress or $verbose;
+  print "$file => " if $debug;
+  # print_percent "Getting: $file... " if $progress or $verbose;
+  print_percent "Getting: $url -> $file... " if $progress or $verbose;
   print "\t #" if $progress;
   if (! $do_dry_run) {
     unlink $file if -f $file;
@@ -2067,11 +2348,27 @@ sub make_next_snapshot {
   my ($mirrordir, $dist, $codename, $dist_sdir, $tempdir) = @_;
 
   my $next = get_next_snapshot($dist);
+  my $subpath;
+  if ($dist eq "none"){
+    $subpath = "";
+  }
+  else {
+    #$subpath = "dists/$codename$dist_sdir";
+    if ($dists_subpath) {
+      $subpath = "dists/$codename$dist_sdir";
+      #$separator = "/";
+    } else {
+      $subpath = "$codename$dist_sdir";
+      #$separator = "/";
+    }
+
+  }
+
   make_dir("$mirrordir/dists/$dist/$next");
   unlink("$mirrordir/dists/$dist/$next/Release");
-  link("$tempdir/dists/$codename$dist_sdir/Release",
+  link("$tempdir/$subpath/Release",
        "$mirrordir/dists/$dist/$next/Release")
-    or die "Error while linking $tempdir/dists/$codename$dist_sdir/Release: $!\n";
+    or die "Error while linking $tempdir/$subpath/Release: $!\n";
   return $next;
 }
 
@@ -2096,10 +2393,25 @@ sub update_latest_links {
 sub link_release_into_snapshot {
   my ($mirrordir,$dist,$next,$tempdir,$codename,$dist_sdir,$base) = @_;
 
+  my $subpath;
+  if ($dist eq "none"){
+    $subpath = "";
+  }
+  else {
+    $subpath = "dists/$codename$dist_sdir";
+    if ($dists_subpath) {
+      $subpath = "dists/$codename$dist_sdir";
+      #$separator = "/";
+    } else {
+      $subpath = "$codename$dist_sdir";
+      #$separator = "/";
+    }
+  }
+
   unlink("$mirrordir/dists/$dist/$next/$base");
-  link("$tempdir/dists/$codename$dist_sdir/$base",
+  link("$tempdir/$subpath/$base",
        "$mirrordir/dists/$dist/$next/$base")
-    or die "Error while linking $tempdir/dists/$codename$dist_sdir/$base: $!\n";
+    or die "Error while linking $tempdir/$subpath/$base: $!\n";
   return;
 }
 
@@ -2267,6 +2579,7 @@ sub gpg_verify {
         or die "get flags on gpg status-fd: $!";
       fcntl($statusp, F_SETFD, $status_flags & ~FD_CLOEXEC)
         or die "clear close-on-exec flag on gpg status-fd: $!";
+      # my @gpgv = qw(gpgv --verbose --verbose --output - --status-fd);
       my @gpgv = qw(gpgv --output - --status-fd);
       push @gpgv, fileno($statusp);
       push @gpgv, (map { ('--keyring' => $_) } @keyrings);
@@ -2296,18 +2609,49 @@ sub gpg_verify {
 sub get_release {
   my ($tdir, $dist) = @_;
 
+  # Debug
+  say("tdir: $tdir");
+
   make_dir ("$tdir");
-  return 0 unless remote_get("dists/$dist/Release", "$tempdir/.tmp");
+
+  my $subpath;
+  my $separator;
+
+  if ($dist eq "none") {
+    $subpath = "";
+    $separator = "";   
+  }
+  else {
+    #$subpath = "dists/$dist";
+    #$separator = "/";   
+
+    if ($dists_subpath) {
+       $subpath = "dists/$dist";
+       $separator = "/";
+    } else {
+       $subpath = "$dist";
+       $separator = "/";
+    }
+  }
+
+  # Debug
+  say("get_release: subpath is $subpath");
+
+  # Original
+  # return 0 unless remote_get("$subpath/Release", "$tempdir/.tmp");
+
+  # Don't exit immediately
+  remote_get("${subpath}${separator}Release", "$tempdir/.tmp");
 
   # Save current error state so we can roll back if $ignore_release_gpg
   # is set; needed because remote_get() can register errors
   my @t_errlog = @errlog;
   my $t_errors = $num_errors;
-  remote_get("dists/$dist/InRelease", "$tempdir/.tmp");
+  remote_get("${subpath}${separator}InRelease", "$tempdir/.tmp");
 
   my @inr_t_errlog = @errlog;
   my $inr_t_errors = $num_errors;
-  remote_get("dists/$dist/Release.gpg", "$tempdir/.tmp");
+  remote_get("${subpath}${separator}Release.gpg", "$tempdir/.tmp");
 
   # We only need one of InRelease and Release.gpg.
   if ($inr_t_errors == $t_errors || $num_errors == $inr_t_errors) {
@@ -2320,31 +2664,48 @@ sub get_release {
   }
   else {
     my $got_gpg = 0;
-    if (-f "$tdir/Release" && -f "$tdir/Release.gpg") {
-      $got_gpg = 1;
-      gpg_verify("$tdir/Release.gpg", "$tdir/Release.gpg", "$tdir/Release");
-    }
-    if (-f "$tdir/InRelease") {
-      my ($content_fh, $content_filename) = tempfile();
-      my ($signature_fh, $signature_filename) = tempfile();
-      eval {
-        if (split_clearsigned_file("$tdir/InRelease",
-                                   $content_fh, $signature_fh)) {
-          $got_gpg = 1;
-          gpg_verify("$tdir/InRelease",
-                     $signature_filename, $content_filename);
-        } else {
-          say("InRelease file is not signed.");
-        }
-      };
-      if ($@) {
-        warn $@;
-        push (@errlog,$@);
-        $num_errors++;
+
+    if ($check_gpg_release) {
+      if (-f "$tdir/Release" && -f "$tdir/Release.gpg") {
+        $got_gpg = 1;
+        say("GPG: check $tdir/Release and $tdir/Release.gpg");
+        gpg_verify("$tdir/Release.gpg", "$tdir/Release.gpg", "$tdir/Release");
+      } else {
+        say("GPG: Files $tdir/Release and $tdir/Release.gpg don't exist. Skipping ...");
       }
-      unlink($content_filename);
-      unlink($signature_filename);
+    } else {
+        say("GPG: Verification of Release.gpg skipped since --no-check-gpg-release was used");
     }
+
+    if ($check_gpg_inrelease) {
+      if (-f "$tdir/InRelease") {
+        my ($content_fh, $content_filename) = tempfile();
+        my ($signature_fh, $signature_filename) = tempfile();
+        say("GPG: check $tdir/InRelease");
+        eval {
+          if (split_clearsigned_file("$tdir/InRelease",
+                                     $content_fh, $signature_fh)) {
+            $got_gpg = 1;
+            gpg_verify("$tdir/InRelease",
+                       $signature_filename, $content_filename);
+          } else {
+            say("InRelease file is not signed.");
+          }
+        };
+        if ($@) {
+          warn $@;
+          push (@errlog,$@);
+          $num_errors++;
+        }
+        unlink($content_filename);
+        unlink($signature_filename);
+      } else {
+          say("GPG: File $tdir/InRelease doesn't exist. Skipping ...");
+      }
+    } else {
+        say("GPG: Verification of InRelease.gpg skipped since --no-check-gpg-inrelease was used");
+    }
+
     if (! $got_gpg) {
       say("Release gpg signature does not verify, file missing.");
       push (@errlog,"Release gpg signature does not verify\n");
@@ -2361,7 +2722,8 @@ sub get_release {
 
 sub name_release {
   my ($type, $tdir, $dist) = @_;
-  my ($codename, $suite);
+  # my ($codename, $suite);
+  my ($suite);
   my $origin = "unknown";
 
   if (-f "$tdir/Release") {
@@ -2376,7 +2738,9 @@ sub name_release {
 
     $_ = $buf;
     ($origin) = m/^Origin:\s+(.*)/im if (/^Origin:/im);
-    ($codename) = m/^Codename:\s+(.*)/im;
+    if ($codename eq "") {
+        ($codename) = m/^Codename:\s+(.*)/im;
+    }
     ($suite) = m/^Suite:\s+(.*)/im;
   } elsif ($ignore_missing_release) {
     $origin = "none";
@@ -2387,6 +2751,7 @@ sub name_release {
   my ($dist_raw, $dist_sdir) = split_dist($dist);
 
   if ($origin eq "none") {
+    say("Origin was none, set codename to $dist_raw");
     $codename = $dist_raw;
   } elsif ($origin eq "Ubuntu" or $origin eq "Canonical" or $origin eq "UbuntuESM" or $origin eq "UbuntuESMApps") {
     if ($suite) {
@@ -2400,7 +2765,11 @@ sub name_release {
     }
   } elsif ($codename) {
     if ($dist_raw ne $codename && $dist_raw ne $suite) {
-      say("Broken Release file: neither Codename nor Suite matches $dist.");
+      say("Broken Release file: neither Codename nor Suite matches dist <$dist> / dist_raw <$dist_raw>.");
+      say("\t- Codename: $codename");
+      say("\t- Suite: $suite");
+      say("\t- Dist: $dist");
+      say("\t- Dist_RAW: $dist_raw");
       push (@errlog,"Broken Release file: neither Codename nor Suite matches $dist\n");
       $num_errors++;
       next;
@@ -2441,6 +2810,11 @@ sub get_index {
   my $file=shift;
   make_dir($subdir);
   make_dir("$tempdir/$subdir");
+
+  # Debug
+  say("get_index: subdir = $subdir");
+  say("get_index: file = $file");
+  say("get_index: tempdir/subdir = $tempdir/$subdir");
 
   if ($diff_mode ne "none" && exists $file_lists{"$tempdir/$subdir/$file.diff/Index"}{size}) {
     if (!check_lists("$tempdir/$subdir/$file.diff/Index")) {
@@ -2651,25 +3025,66 @@ sub link_index {
     $archdir = "binary-$arch";
   }
   my $next = get_next_snapshot($dist);
-  make_dir("$mirrordir/dists/$dist/$next/$section/$archdir");
-  unlink("$mirrordir/dists/$dist/$next/$section/$archdir/$file");
-  link("$tempdir/dists/$dist/$section/$archdir/$file",
-       "$mirrordir/dists/$dist/$next/$section/$archdir/$file")
-    or warn "Error while linking $tempdir/dists/$dist/$section/$archdir/$file: $!\n";
-  unlink("$mirrordir/dists/$dist/$next/$section/$archdir/$file.gz");
-  link("$tempdir/dists/$dist/$section/$archdir/$file.gz",
-       "$mirrordir/dists/$dist/$next/$section/$archdir/$file.gz")
-    or die "Error while linking $tempdir/dists/$dist/$section/$archdir/$file.gz: $!\n";
-  unlink("$mirrordir/dists/$dist/$next/$section/$archdir/$file.xz");
-  link("$tempdir/dists/$dist/$section/$archdir/$file.xz",
-       "$mirrordir/dists/$dist/$next/$section/$archdir/$file.xz")
-    or die "Error while linking $tempdir/dists/$dist/$section/$archdir/$file.xz: $!\n";
+
+  my $temp_subpath;
+  my $next_subpath;
+  my $section_subpath;
+
+  if ($section ne "none") {
+     $section_subpath = "/$section";
+   } else {
+     $section_subpath = "";
+   }
+
+
+  if ($dist eq "none") {
+    $temp_subpath = "";
+    $next_subpath = "";
+  }
+  else {
+    if ($dists_subpath) {
+      $temp_subpath = "dists/$dist$section_subpath";
+      $next_subpath = "dists/$dist/$next$section_subpath";
+    } else {
+      $temp_subpath = "$dist$section_subpath";
+      $next_subpath = "$dist/$next$section_subpath";
+    }
+  }
+
+  my $arch_subpath;
+
+  if (!$flat_structure) {
+    $arch_subpath = "${archdir}/"
+  } else {
+    $arch_subpath = ""
+  }
+
+  make_dir("$mirrordir/${next_subpath}/${arch_subpath}");
+  unlink("$mirrordir/${next_subpath}/${arch_subpath}$file");
+  link("$tempdir/${temp_subpath}/${arch_subpath}$file",
+       "$mirrordir/${next_subpath}/${arch_subpath}$file")
+    or warn "Error while linking $tempdir/${temp_subpath}/${arch_subpath}$file: $!\n";
+  unlink("$mirrordir/${next_subpath}/${arch_subpath}$file.gz");
+  link("$tempdir/${temp_subpath}/${arch_subpath}$file.gz",
+       "$mirrordir/${next_subpath}/${arch_subpath}$file.gz")
+    or die "Error while linking $tempdir/${temp_subpath}/${arch_subpath}$file.gz: $!\n";
+  unlink("$mirrordir/${next_subpath}/${arch_subpath}$file.xz");
+  link("$tempdir/${temp_subpath}/${arch_subpath}$file.xz",
+       "$mirrordir/${next_subpath}/${arch_subpath}$file.xz")
+    or die "Error while linking $tempdir/${temp_subpath}/${arch_subpath}$file.xz: $!\n";
   return;
 }
 
 sub i18n_from_release {
   my ($dist,$distpath) = @_;
-  my $subdir = "dists/$dist/$distpath";
+  my $subdir;
+
+  if ($dists_subpath) {
+    $subdir = "dists/$dist/$distpath"
+  } else {
+    $subdir = "$dist/$distpath"
+  }
+
   my $compdir = $tempdir."/".$subdir;
   my ($exclude, $include, $sha1, $size, $filename);
   $exclude = "(".join("|", @excludes).")" if @excludes;
@@ -2724,7 +3139,15 @@ sub get_i18n_files {
 
 sub cnf_from_release {
   my ($dist,$distpath) = @_;
-  my $subdir = "dists/$dist/$distpath";
+
+  my $subdir;
+
+  if ($dists_subpath) {
+    $subdir = "dists/$dist/$distpath"
+  } else {
+    $subdir = "$dist/$distpath"
+  }
+
   my $compdir = $tempdir."/".$subdir;
   my ($exclude, $include, $size, $filename);
   $exclude = "(".join("|", @excludes).")" if @excludes;
@@ -3012,7 +3435,19 @@ sub di_check_dists {
         }
       }
       # Only mirroring D-I images, not the archive itself
-      my $tdir="$tempdir/.tmp/dists/$di_dist";
+      my $tdir;
+      if ($di_dist eq "none"){
+        $tdir="$tempdir/.tmp/dists/_";
+      }
+      else {
+        if ($dists_subpath) {
+          $tdir="$tempdir/.tmp/dists/$di_dist";
+        } else {
+          $tdir="$tempdir/.tmp/$di_dist";
+        }
+
+      }
+
       next unless (get_release($tdir, $di_dist) || $ignore_missing_release);
       name_release("d-i", $tdir, $di_dist);
       unlink "$tdir/Release";
