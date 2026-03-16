@@ -288,7 +288,9 @@ checked. The default is to check signatures.
 
 =item B<--keyring>=I<file>
 
-Use I<file> as an additional gpg-format keyring.  May be given multiple times.
+Use I<file> as an additional gpg-format keyring. May be given multiple times.
+
+Alternatively multiple Files might be given as a comma-separated list.
 
 Note that these will be used in addition to $GNUPGHOME/trustedkeys.gpg.
 The latter can be removed from the set of keyrings by setting
